@@ -23,6 +23,10 @@ namespace Assets.Scripts
 
         private Action MoveDelegate;
 
+        private DiamondSingleScript DiamondChildScript;
+
+        private DiamondScript DiamondsPoint;
+
         private int next_index;
         private bool dying;
         private Animator _anim;
@@ -70,7 +74,7 @@ namespace Assets.Scripts
 
                 if (next_index + 1 == PathPoints.Length)
                 {
-                    Destroy(gameObject);
+                    OnDestory(true);
                 }
 
                 next_index = (next_index + 1) % PathPoints.Length;
@@ -82,20 +86,18 @@ namespace Assets.Scripts
 
             var nextStep = nextStepVectorDirection*MoveSpeedStep;
 
+            var scale = transform.localScale;
+
             if (nextStep.x > 0f)
             {
-                var scale =  transform.localScale;
                 scale.x = Mathf.Abs(transform.localScale.x);
-
-                transform.localScale = scale;
             }
             else if (nextStep.x < 0f)
             {
-                var scale = transform.localScale;
                 scale.x =  - Mathf.Abs(transform.localScale.x);
-
-                transform.localScale = scale;
             }
+
+            transform.localScale = scale;
 
             transform.Translate(nextStep, Space.World);
         }
@@ -109,12 +111,27 @@ namespace Assets.Scripts
 
             mining = true;
 
-            StartCoroutine(StartMining());
+            var nextDiamond = DiamondsPoint.StealOneDiamond();
+
+            if (nextDiamond != null)
+            {
+                DiamondChildScript = nextDiamond;
+
+                DiamondChildScript.gameObject.transform.SetParent(transform);
+
+                DiamondChildScript.gameObject.transform.localPosition = new Vector3(0.2f, 0f);
+
+                DiamondChildScript.CathedByMonster();
+
+                StartCoroutine(StartMining());
+            }
         }
 
         public IEnumerator StartMining()
         {
             yield return new WaitForSeconds(MiningTime);
+
+
 
             MoveDelegate = Move;
         }
@@ -133,15 +150,19 @@ namespace Assets.Scripts
             if (other.gameObject.CompareTag(DiamondScript.TagString))
             {
                 MoveDelegate = MiningDiamond;
+
+                DiamondsPoint = other.gameObject.GetComponent<DiamondScript>();
+
+                if (DiamondsPoint == null)
+                {
+                    Debug.Log("other.gameObject.GetComponent<DiamondScript>() == null");
+                }
             }
 
             if (other.gameObject.CompareTag(AbstractTrapScript.TagString))
             {
                 MoveDelegate = DyingMethod;
             }
-
-
-            Debug.Log("other.name = " + other.name);
             
         }
 
@@ -159,6 +180,29 @@ namespace Assets.Scripts
         private IEnumerator DyingCoroutine()
         {
             yield return new WaitForSeconds(DyingTime);
+
+            OnDestory();
+        }
+
+        private void OnDestory(bool finished = false)
+        {
+            var hasDiamond = DiamondChildScript != null;
+
+            if (finished)
+            {
+                var playerStatsGameObject = GameObject.FindGameObjectWithTag(PlayerLevelStats.TagString);
+
+                var playerStats = playerStatsGameObject.GetComponent<PlayerLevelStats>();
+
+                if (playerStats != null && hasDiamond) playerStats.MinersGotDiamond();
+            }
+            else
+            {
+                if (hasDiamond)
+                {
+                    DiamondChildScript.DropedFromMonster();
+                }
+            }
 
             Destroy(gameObject);
         }
