@@ -7,7 +7,12 @@ namespace Assets.Scripts
 {
     public class EnemySpawnPoint : MonoBehaviour
     {
+        private int enemy_spawned_count;
+
         public EnemyMovesScripts EnemyPrefab;
+
+        public bool RepeatMoves;
+
 
         public List<GameObject> PathPointsGameObjects;
         private Vector2[] PathPoints;
@@ -20,6 +25,8 @@ namespace Assets.Scripts
         // Use this for initialization
         void Start ()
         {
+            enemy_spawned_count = 0;
+
             var newPathPoints = new List<Vector2>();
 
             PathPointsGameObjects.ForEach(p =>
@@ -30,7 +37,7 @@ namespace Assets.Scripts
 
             PathPoints = newPathPoints.ToArray();
         }
-	
+
         // Update is called once per frame
         void Update ()
         {
@@ -41,33 +48,25 @@ namespace Assets.Scripts
 
             cooldown = true;
 
-            StartCoroutine(SpawnEnemy());
+            StartCoroutine(SpawnEnemy(Timer));
         }
 
-        private IEnumerator SpawnEnemy()
+        private IEnumerator SpawnEnemy(float cooldown_time)
         {
-            yield return new WaitForSeconds(Timer);
+            yield return new WaitForSeconds(cooldown_time);
+
+            enemy_spawned_count++;
 
             var enemy = (GameObject) GameObject.Instantiate(EnemyPrefab.gameObject, transform.position, Quaternion.identity);
 
-            
+            enemy.name = "[" + enemy_spawned_count + "] " + EnemyPrefab.gameObject.name;
 
             var enemyMoves = enemy.GetComponent<EnemyMovesScripts>();
 
-            enemyMoves.SetMovePoints(PathPoints);
-
-
+            enemyMoves.SetMovePoints(PathPoints, RepeatMoves);
 
             this.cooldown = false;
 
         }
     }
-
-    //[Serializable]
-    //public class SpawnTimes
-    //{
-    //    public float Time;
-
-    //    public int Count;
-    //}
 }

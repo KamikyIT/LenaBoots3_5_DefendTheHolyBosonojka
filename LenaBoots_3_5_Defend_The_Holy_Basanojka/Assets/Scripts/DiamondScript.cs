@@ -37,6 +37,8 @@ namespace Assets.Scripts
 
                 if (nextDiamond == null)
                 {
+                    Debug.Log("nextDiamond == null");
+
                     return null;
                 }
 
